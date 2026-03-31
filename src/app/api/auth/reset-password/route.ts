@@ -76,12 +76,12 @@ export async function POST(request: NextRequest) {
     const validOtps = otpSnapshot.docs
       .map((d) => ({ id: d.id, ...d.data() } as OtpCode & { id: string }))
       .filter((o) => {
-        const exp = timestampToDate(o.expiresAt as unknown);
+        const exp = timestampToDate(o.expiresAt);
         return exp > now;
       })
       .sort((a, b) => {
-        const aTime = timestampToDate(a.createdAt as unknown).getTime();
-        const bTime = timestampToDate(b.createdAt as unknown).getTime();
+        const aTime = timestampToDate(a.createdAt).getTime();
+        const bTime = timestampToDate(b.createdAt).getTime();
         return bTime - aTime;
       });
 
