@@ -19,6 +19,7 @@ import {
   Lock as LockIcon,
   LogOut,
   Lock,
+  Mail,
   MessageSquare,
   MoreHorizontal,
   Paperclip,
@@ -119,6 +120,127 @@ function ConfirmModal({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Invite Modal ───────────────────────────────────────────
+interface InviteModalProps {
+  isOpen: boolean;
+  email: string;
+  message: string;
+  error?: string;
+  loading?: boolean;
+  onEmailChange: (value: string) => void;
+  onMessageChange: (value: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+}
+
+function InviteModal({
+  isOpen,
+  email,
+  message,
+  error,
+  loading = false,
+  onEmailChange,
+  onMessageChange,
+  onSubmit,
+  onCancel,
+}: InviteModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => !loading && onCancel()}
+      />
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+        <button
+          onClick={onCancel}
+          disabled={loading}
+          className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+        >
+          <X size={18} />
+        </button>
+        <div className="p-6">
+          <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200">
+            <Mail size={28} className="text-slate-600" />
+          </div>
+          <h3 className="mb-2 text-lg font-bold text-gray-800 text-center">Mời bạn bè</h3>
+          <p className="mb-5 text-sm text-gray-600 leading-relaxed text-center">
+            Nhập email để gửi lời mời tham gia nhóm học.
+          </p>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-600">Gmail</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => onEmailChange(event.target.value)}
+              placeholder="friend@gmail.com"
+              autoComplete="email"
+              className={`w-full px-4 py-2.5 text-sm rounded-xl border outline-none transition-colors ${
+                error ? 'border-red-300 focus:border-red-400' : 'border-gray-200 focus:border-slate-300'
+              }`}
+            />
+            {error ? <p className="text-xs text-red-500">{error}</p> : null}
+          </div>
+          <div className="space-y-2 mt-4">
+            <label className="text-xs font-semibold text-gray-600">Lời nhắn (tùy chọn)</label>
+            <textarea
+              value={message}
+              onChange={(event) => onMessageChange(event.target.value)}
+              rows={3}
+              placeholder="Ví dụ: Mình mời bạn tham gia nhóm học để cùng trao đổi..."
+              className="w-full px-4 py-2.5 text-sm rounded-xl border border-gray-200 outline-none transition-colors focus:border-slate-300 resize-none"
+            />
+          </div>
+          <div className="flex items-center gap-3 mt-6">
+            <button
+              onClick={onCancel}
+              disabled={loading}
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={onSubmit}
+              disabled={loading}
+              className="flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-xl transition-all hover:shadow-lg disabled:opacity-70 bg-gradient-to-r from-slate-800 via-slate-900 to-slate-950 hover:shadow-slate-200"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  Đang gửi...
+                </span>
+              ) : (
+                'Gửi lời mời'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Toast ──────────────────────────────────────────────────
+interface ActionToastProps {
+  message: string;
+  show: boolean;
+  variant?: 'success' | 'error';
+}
+
+function ActionToast({ message, show, variant = 'success' }: ActionToastProps) {
+  if (!show) return null;
+  const baseClass = 'fixed top-20 right-4 z-[100] flex items-center gap-2 px-5 py-3 text-sm font-medium text-white rounded-xl shadow-xl animate-in slide-in-from-right fade-in duration-300';
+  const variantClass = variant === 'success' ? 'bg-emerald-500 shadow-emerald-200' : 'bg-red-500 shadow-red-200';
+
+  return (
+    <div className={`${baseClass} ${variantClass}`}>
+      {variant === 'success' ? <CheckCircle size={18} /> : <XCircle size={18} />}
+      {message}
     </div>
   );
 }
@@ -304,6 +426,7 @@ export default function GroupDetailPage() {
   const [activeTab, setActiveTab] = useState<GroupTab>('feed');
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [groupPosts, setGroupPosts] = useState<GroupPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
@@ -312,6 +435,13 @@ export default function GroupDetailPage() {
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [currentUserIsVip, setCurrentUserIsVip] = useState(false);
   const [memberActionLoading, setMemberActionLoading] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [inviteError, setInviteError] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVariant, setToastVariant] = useState<'success' | 'error'>('success');
+  const [showToast, setShowToast] = useState(false);
 
   const isMember = group?.userMembershipStatus === 'member';
   const isAdmin = group?.userMemberRole === 'admin';
@@ -362,6 +492,15 @@ export default function GroupDetailPage() {
     fetchGroup();
     fetchGroupPosts();
   }, [fetchGroup, fetchGroupPosts]);
+
+  useEffect(() => {
+    if (!showToast) return;
+    const timer = setTimeout(() => {
+      setShowToast(false);
+      setToastMessage('');
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, [showToast]);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -510,6 +649,75 @@ export default function GroupDetailPage() {
     }
   };
 
+  const handleShareGroup = async () => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const shareUrl = baseUrl ? `${baseUrl}/groups/${groupId}` : '';
+    if (!shareUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setToastVariant('success');
+      setToastMessage('Bạn đã copy link nhóm');
+      setShowToast(true);
+    } catch {
+      setToastVariant('error');
+      setToastMessage('Không thể sao chép link nhóm');
+      setShowToast(true);
+    }
+  };
+
+  const handleInviteSubmit = async () => {
+    const trimmedEmail = inviteEmail.trim();
+    if (!trimmedEmail) {
+      setInviteError('Vui lòng nhập email để mời');
+      return;
+    }
+    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+    if (!isValid) {
+      setInviteError('Email chưa đúng định dạng');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    setInviteLoading(true);
+    setInviteError('');
+    try {
+      const res = await fetch(`/api/groups/${groupId}/invite`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          message: inviteMessage.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setInviteError(data.message || 'Không thể gửi lời mời');
+        return;
+      }
+
+      setShowInviteModal(false);
+      setInviteEmail('');
+      setInviteMessage('');
+      setToastVariant('success');
+      setToastMessage(`Đã gửi lời mời tới ${trimmedEmail}`);
+      setShowToast(true);
+    } catch {
+      setInviteError('Lỗi kết nối. Vui lòng thử lại.');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
   const pendingCount = group?.pendingMembers?.length || 0;
 
   const tabs: { key: GroupTab; label: string; icon: React.ReactNode; badge?: number }[] = [
@@ -604,7 +812,10 @@ export default function GroupDetailPage() {
                 <div className="flex items-center gap-2">
                   {isMember ? (
                     <>
-                      <button className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all">
+                      <button
+                        onClick={handleShareGroup}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all"
+                      >
                         <Share2 size={16} /> Chia sẻ
                       </button>
                       <button
@@ -786,7 +997,14 @@ export default function GroupDetailPage() {
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-base font-semibold text-gray-800">{group.membersCount} thành viên</h3>
                     {isAdmin && (
-                      <button className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                      <button
+                        onClick={() => {
+                          setInviteError('');
+                          setInviteMessage('');
+                          setShowInviteModal(true);
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                      >
                         <UserPlus size={16} /> Mời thành viên
                       </button>
                     )}
@@ -982,10 +1200,20 @@ export default function GroupDetailPage() {
                   >
                     <Plus size={16} /> Tạo bài viết
                   </Link>
-                  <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-slate-50 hover:text-slate-600 rounded-xl transition-colors">
+                  <button
+                    onClick={() => {
+                      setInviteError('');
+                      setInviteMessage('');
+                      setShowInviteModal(true);
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-slate-50 hover:text-slate-600 rounded-xl transition-colors"
+                  >
                     <UserPlus size={16} /> Mời bạn bè
                   </button>
-                  <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-slate-50 hover:text-slate-600 rounded-xl transition-colors">
+                  <button
+                    onClick={handleShareGroup}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-slate-50 hover:text-slate-600 rounded-xl transition-colors"
+                  >
                     <Share2 size={16} /> Chia sẻ nhóm
                   </button>
                 </div>
@@ -1036,6 +1264,27 @@ export default function GroupDetailPage() {
         onConfirm={handleLeave}
         onCancel={() => !actionLoading && setShowLeaveModal(false)}
       />
+
+      {/* Invite Modal */}
+      <InviteModal
+        isOpen={showInviteModal}
+        email={inviteEmail}
+        message={inviteMessage}
+        error={inviteError}
+        loading={inviteLoading}
+        onEmailChange={(value) => {
+          setInviteEmail(value);
+          if (inviteError) setInviteError('');
+        }}
+        onMessageChange={(value) => {
+          setInviteMessage(value);
+          if (inviteError) setInviteError('');
+        }}
+        onSubmit={handleInviteSubmit}
+        onCancel={() => !inviteLoading && setShowInviteModal(false)}
+      />
+
+      <ActionToast message={toastMessage} show={showToast} variant={toastVariant} />
     </div>
   );
 }
